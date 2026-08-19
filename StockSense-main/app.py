@@ -51,110 +51,52 @@ def get_price_color(new_price, prev_price):
 # --- STREAMLIT CONFIG ---
 st.set_page_config(page_title="StockSense Pro+", page_icon="📊", layout="wide")
 
-# =========================================================
-# 🧑‍💼 USER SIGN-IN
-# =========================================================
-st.markdown("""
-<style>
-.signin-box {
-    background-color: #161a1e;
-    padding: 15px 20px;
-    border-radius: 10px;
-    color: #E7ECEF;
-    box-shadow: 0 0 8px rgba(0,229,255,0.3);
-}
-.signin-btn {
-    background-color: #00E5FF;
-    color: black;
-    border-radius: 8px;
-    font-weight: 600;
-    padding: 6px 14px;
-    border: none;
-    cursor: pointer;
-}
-.signin-btn:hover {
-    background-color: #00b3cc;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# Track sign-in state
-if "signed_in" not in st.session_state:
-    st.session_state.signed_in = False
-
-# Sign-in section (top left)
-col1, col2 = st.columns([0.3, 1])
-with col1:
-    if not st.session_state.signed_in:
-        if st.button("🔐 Sign In", key="signin_main"):
-            st.session_state.show_login = True
-    else:
-        st.markdown(f"**👋 Welcome, {st.session_state.get('user_email', 'Trader')}!**")
-
-# Popup modal for login
-if st.session_state.get("show_login", False):
-    with st.form("login_form"):
-        st.subheader("🔑 Sign In to Your Account")
-        email = st.text_input("Email or Username")
-        password = st.text_input("Password", type="password")
-        login_btn = st.form_submit_button("Sign In")
-
-        if login_btn:
-            if email and password:
-                st.session_state.signed_in = True
-                st.session_state.user_email = email
-                st.session_state.show_login = False
-                st.success(f"✅ Logged in as {email}")
-            else:
-                st.error("❌ Please fill in both fields.")
-
 # Divider
 st.markdown("---")
 
 # =========================================================
 # ⚙️ AUTO BUY/SELL FEATURE (Unified Frontend Mock)
 # =========================================================
-if st.session_state.signed_in:
-    if "auto_trade_enabled" not in st.session_state:
-        st.session_state.auto_trade_enabled = False
+if "auto_trade_enabled" not in st.session_state:
+    st.session_state.auto_trade_enabled = False
 
-    st.markdown("""
-    <style>
-    .trade-btn {
-        display: inline-block;
-        font-weight: 600;
-        color: black;
-        padding: 10px 20px;
-        border-radius: 10px;
-        border: none;
-        font-size: 16px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
-    }
-    .trade-btn:hover {
-        transform: scale(1.05);
-    }
-    </style>
-    """, unsafe_allow_html=True)
+st.markdown("""
+<style>
+.trade-btn {
+    display: inline-block;
+    font-weight: 600;
+    color: black;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+}
+.trade-btn:hover {
+    transform: scale(1.05);
+}
+</style>
+""", unsafe_allow_html=True)
 
-    # Toggle button
+# Toggle button
+if st.session_state.auto_trade_enabled:
+    btn_label = "🔴 Stop Auto Buy/Sell"
+    btn_color = "#FF4B4B"
+else:
+    btn_label = "🟢 Enable Auto Buy/Sell"
+    btn_color = "#00FF7F"
+
+# Render styled button
+if st.button(btn_label, key="auto_trade_toggle"):
+    st.session_state.auto_trade_enabled = not st.session_state.auto_trade_enabled
+
+    # Feedback toast
     if st.session_state.auto_trade_enabled:
-        btn_label = "🔴 Stop Auto Buy/Sell"
-        btn_color = "#FF4B4B"
+        st.success("✅ Auto Buy/Sell Enabled")
     else:
-        btn_label = "🟢 Enable Auto Buy/Sell"
-        btn_color = "#00FF7F"
-
-    # Render styled button
-    if st.button(btn_label, key="auto_trade_toggle"):
-        st.session_state.auto_trade_enabled = not st.session_state.auto_trade_enabled
-
-        # Feedback toast
-        if st.session_state.auto_trade_enabled:
-            st.success("✅ Auto Buy/Sell Enabled")
-        else:
-            st.warning("🛑 Auto Buy/Sell Stopped")
+        st.warning("🛑 Auto Buy/Sell Stopped")
 
 # --- API & ANALYZER ---
 analyzer = SentimentIntensityAnalyzer()
@@ -409,9 +351,18 @@ if compare_selection:
     compare_data = {}
     for name, ticker in zip(compare_selection, compare_tickers):
         df = yf.download(ticker, start=start, end=end, interval="1d", progress=False)
-        if df.empty:
+        if df is None or df.empty:
             continue
-        df["Normalized"] = df["Close"] / df["Close"].iloc[0] * 100
+        # yfinance returns MultiIndex columns (Price, Ticker); keep only the price level
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.droplevel(-1)
+        if "Close" not in df.columns:
+            continue
+        close = pd.to_numeric(df["Close"], errors="coerce").dropna()
+        if close.empty or close.iloc[0] == 0:
+            continue
+        df = df.loc[close.index]
+        df["Normalized"] = close / close.iloc[0] * 100
         compare_data[name] = df
 
     if compare_data:

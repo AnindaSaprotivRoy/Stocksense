@@ -11,7 +11,6 @@ A real-time stock analysis and trading platform with sentiment analysis and AI-p
 - News sentiment analysis using VADER
 - Interactive charts and visualizations with Plotly
 - Auto-refresh functionality for real-time updates
-- User authentication and session management
 
 ## Installation
 
@@ -36,7 +35,8 @@ A real-time stock analysis and trading platform with sentiment analysis and AI-p
    Create a `.env` file in the project root with:
    ```
    NEWS_API_KEY=your_newsapi_key
-   GEMINI_API_KEY=your_gemini_api_key
+   GOOGLE_API_KEY=your_gemini_api_key
+   LIVE_API_KEY=your_twelvedata_key
    ```
 
 ## Usage
