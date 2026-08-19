@@ -1,4 +1,7 @@
-# StockSense
+# StockSense — methodology
+
+The full scoring methodology behind the verdict. For what the project is,
+screenshots, setup and API keys, see the [root README](../README.md).
 
 A single-page equity research view built with Streamlit. Enter a ticker and get
 one continuous flow — snapshot, news, sentiment, technicals, and a synthesized
@@ -39,13 +42,9 @@ Two appendices sit below the flow: a **peer comparison** (up to 3 tickers,
 
 Cache TTLs: quote 30s · news 10m · intraday 5m · daily 15m · forecast 15m ·
 company name 24h.
-
 ---
-
 ## Scoring methodology
-
 All of it lives in **`analysis.py`**, which is pure — no network, no Streamlit,
-no LLM. Every number the verdict displays is produced there, and it is the only
 file you need to edit to change the methodology.
 
 Each signal normalises to `[-1, +1]` (+1 = maximally bullish), carries a fixed
@@ -140,27 +139,11 @@ sides instead of presenting the average as a consensus.
 
 ## Setup
 
+Install and API-key instructions live in the [root README](../README.md#-setup).
+In short, from `StockSense-main/`:
+
 ```bash
-python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-```
-
-Create a `.env` in the project root:
-
-```
-NEWS_API_KEY=your_newsapi_key      # optional — without it, sentiment is excluded
-GOOGLE_API_KEY=your_gemini_key     # optional — narration and chat only
-LIVE_API_KEY=your_twelvedata_key   # optional — live price overlay
-```
-
-None of the keys are required to run. Missing ones degrade specific sections
-and lower the verdict's confidence rather than breaking the page: without
-`NEWS_API_KEY` the sentiment signal is marked unavailable and coverage drops to
-80%; without `LIVE_API_KEY` the price comes from yfinance's `fast_info`;
-without `GOOGLE_API_KEY` the narration and chat panels explain that they are
-disabled.
-
-```bash
 streamlit run app.py     # http://localhost:8501
 python test_analysis.py  # verify the scoring methodology
 ```
@@ -174,14 +157,14 @@ PASS/FAIL line per property, exiting non-zero on any failure.
 
 | File | Role |
 |------|------|
-| `app.py` | Streamlit UI and the page flow. Fetches and renders; computes no scores. |
-| `analysis.py` | **The methodology.** Indicators, signal scoring, verdict and confidence. Pure functions, no I/O. |
-| `signals.py` | Exponential recency-decay weighting for sentiment (180-minute half-life) |
-| `sentiment_model.py` | VADER scoring of headlines, plus the overall label |
-| `fetch_data.py` | yfinance price history and quotes, NewsAPI headlines, query building |
-| `realtime_data.py` | TwelveData live price, overlaid on the quote when configured |
-| `gemini_client.py` | Gemini access, used only for narration and chat |
-| `test_analysis.py` | Self-tests pinning the scoring guarantees |
+| `StockSense-main/app.py` | Streamlit UI and the page flow. Fetches and renders; computes no scores. |
+| `StockSense-main/analysis.py` | **The methodology.** Indicators, signal scoring, verdict and confidence. Pure functions, no I/O. |
+| `StockSense-main/signals.py` | Exponential recency-decay weighting for sentiment (180-minute half-life) |
+| `StockSense-main/sentiment_model.py` | VADER scoring of headlines, plus the overall label |
+| `StockSense-main/fetch_data.py` | yfinance price history and quotes, NewsAPI headlines, query building |
+| `StockSense-main/realtime_data.py` | TwelveData live price, overlaid on the quote when configured |
+| `StockSense-main/gemini_client.py` | Gemini access, used only for narration and chat |
+| `StockSense-main/test_analysis.py` | Self-tests pinning the scoring guarantees |
 
 ### Data flow
 
